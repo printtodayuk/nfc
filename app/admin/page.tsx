@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Plus, Trash2, Package, FolderPlus, Loader2, Edit, Settings, Image as ImageIcon, X, Facebook, Twitter, Instagram, Linkedin, Github, Mail, Phone, MapPin, ExternalLink, Play } from 'lucide-react';
+import { Plus, Trash2, Package, FolderPlus, Loader2, Edit, Settings, Image as ImageIcon, X, Facebook, Twitter, Instagram, Linkedin, Github, Mail, Phone, MapPin, ExternalLink, Play, Users, ShoppingCart as OrdersIcon, CheckCircle, Clock, Truck as ShippingIcon, XCircle } from 'lucide-react';
 
 interface Category {
   id: string;
@@ -56,6 +56,37 @@ interface SiteSettings {
   footerLinks: { label: string; url: string; icon?: string }[];
 }
 
+interface UserProfile {
+  id: string;
+  email: string;
+  role: 'admin' | 'user';
+  displayName?: string;
+  photoURL?: string;
+}
+
+interface OrderItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  image?: string;
+  variant?: {
+    color?: string;
+    size?: string;
+  };
+}
+
+interface Order {
+  id: string;
+  userId: string;
+  userEmail: string;
+  items: OrderItem[];
+  totalAmount: number;
+  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  createdAt: any;
+  shippingAddress?: string;
+}
+
 const AVAILABLE_ICONS = [
   { name: 'Facebook', icon: Facebook },
   { name: 'Twitter', icon: Twitter },
@@ -74,6 +105,8 @@ export default function AdminPage() {
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [siteSettings, setSiteSettings] = useState<SiteSettings>({
     navbarName: 'Today AI',
     logoUrl: '',
@@ -139,11 +172,21 @@ export default function AdminPage() {
       setLoadingSettings(false);
     });
 
+    const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
+      setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile)));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'users'));
+
+    const unsubscribeOrders = onSnapshot(query(collection(db, 'orders'), orderBy('createdAt', 'desc')), (snapshot) => {
+      setOrders(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order)));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'orders'));
+
     return () => {
       unsubscribeAuth();
       unsubscribeCats();
       unsubscribeProds();
       unsubscribeSettings();
+      unsubscribeUsers();
+      unsubscribeOrders();
     };
   }, []);
 
@@ -207,6 +250,15 @@ export default function AdminPage() {
     }
   };
 
+  const handleUpdateOrderStatus = async (orderId: string, status: Order['status']) => {
+    try {
+      await updateDoc(doc(db, 'orders', orderId), { status });
+      toast.success(`Order status updated to ${status}`);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, 'orders');
+    }
+  };
+
   const handleDelete = async (coll: string, id: string) => {
     if (!confirm('Are you sure you want to delete this item?')) return;
     try {
@@ -261,12 +313,18 @@ export default function AdminPage() {
       </div>
 
       <Tabs defaultValue="products" className="space-y-6">
-        <TabsList className="grid w-full max-xl grid-cols-3">
+        <TabsList className="grid w-full max-xl grid-cols-5">
           <TabsTrigger value="products" className="gap-2">
             <Package className="h-4 w-4" /> Products
           </TabsTrigger>
           <TabsTrigger value="categories" className="gap-2">
             <FolderPlus className="h-4 w-4" /> Categories
+          </TabsTrigger>
+          <TabsTrigger value="orders" className="gap-2">
+            <OrdersIcon className="h-4 w-4" /> Orders
+          </TabsTrigger>
+          <TabsTrigger value="users" className="gap-2">
+            <Users className="h-4 w-4" /> Users
           </TabsTrigger>
           <TabsTrigger value="settings" className="gap-2">
             <Settings className="h-4 w-4" /> Settings
@@ -293,7 +351,7 @@ export default function AdminPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
-                      <Label>Price ($) *</Label>
+                      <Label>Price (£) *</Label>
                       <Input type="number" step="0.01" value={prodForm.price} onChange={(e) => setProdForm({...prodForm, price: e.target.value})} placeholder="99.99" />
                     </div>
                     <div className="grid gap-2">
@@ -388,7 +446,7 @@ export default function AdminPage() {
                               <span>{prod.name}</span>
                             </div>
                           </TableCell>
-                          <TableCell>${prod.price.toFixed(2)}</TableCell>
+                          <TableCell>£{prod.price.toFixed(2)}</TableCell>
                           <TableCell>
                             <Badge variant={prod.stock > 0 ? "outline" : "destructive"}>{prod.stock}</Badge>
                             {prod.variants && prod.variants.length > 0 && <span className="ml-2 text-[10px] text-muted-foreground">({prod.variants.length} variants)</span>}
@@ -621,6 +679,123 @@ export default function AdminPage() {
                   <Button onClick={handleSaveSettings} className="w-full h-12 text-lg shadow-lg shadow-primary/20">Save All Site Settings</Button>
                 </>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* Orders Tab */}
+        <TabsContent value="orders" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Customer Orders</CardTitle>
+              <CardDescription>View and manage customer orders and their statuses.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Order ID</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {orders.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-mono text-xs">{order.id}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{order.userEmail}</span>
+                          <span className="text-[10px] text-muted-foreground">{order.userId}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{order.createdAt?.toDate().toLocaleDateString()}</TableCell>
+                      <TableCell>£{order.totalAmount.toFixed(2)}</TableCell>
+                      <TableCell>
+                        <Badge variant={
+                          order.status === 'delivered' ? 'outline' : 
+                          order.status === 'cancelled' ? 'destructive' : 
+                          'default'
+                        }>
+                          {order.status.toUpperCase()}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Select 
+                            value={order.status} 
+                            onValueChange={(val: Order['status']) => handleUpdateOrderStatus(order.id, val)}
+                          >
+                            <SelectTrigger className="w-[130px] h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending">Pending</SelectItem>
+                              <SelectItem value="processing">Processing</SelectItem>
+                              <SelectItem value="shipped">Shipped</SelectItem>
+                              <SelectItem value="delivered">Delivered</SelectItem>
+                              <SelectItem value="cancelled">Cancelled</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete('orders', order.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Users Tab */}
+        <TabsContent value="users" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Registered Users</CardTitle>
+              <CardDescription>View and manage registered customers and administrators.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>User</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>User ID</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                            {user.photoURL ? (
+                              <img src={user.photoURL} alt="" className="h-full w-full rounded-full object-cover" />
+                            ) : (
+                              <Users className="h-4 w-4 text-primary" />
+                            )}
+                          </div>
+                          <span className="font-medium">{user.displayName || 'No Name'}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>
+                        <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
+                          {user.role.toUpperCase()}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">{user.id}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>

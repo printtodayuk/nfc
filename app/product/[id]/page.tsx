@@ -165,7 +165,7 @@ export default function ProductDetailsPage() {
           </div>
 
           <div className="text-3xl font-bold text-primary">
-            ${product.price.toFixed(2)}
+            £{product.price.toFixed(2)}
           </div>
 
           <p className="text-lg text-muted-foreground leading-relaxed">
@@ -248,7 +248,7 @@ export default function ProductDetailsPage() {
               <Truck className="h-5 w-5 text-primary" />
               <div className="text-xs">
                 <p className="font-bold">Free Shipping</p>
-                <p className="text-muted-foreground">On orders over $50</p>
+                <p className="text-muted-foreground">On orders over £50</p>
               </div>
             </div>
             <div className="flex items-center gap-3 p-4 rounded-2xl bg-muted/50">

@@ -76,6 +76,40 @@
         "role": { "type": "string", "enum": ["admin", "user"] }
       },
       "required": ["email", "role"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer order",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "ID of the user who placed the order" },
+        "userEmail": { "type": "string", "format": "email" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "price": { "type": "number" },
+              "quantity": { "type": "number" },
+              "image": { "type": "string" },
+              "variant": {
+                "type": "object",
+                "properties": {
+                  "color": { "type": "string" },
+                  "size": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "totalAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "processing", "shipped", "delivered", "cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "shippingAddress": { "type": "string" }
+      },
+      "required": ["userId", "userEmail", "items", "totalAmount", "status", "createdAt"]
     }
   },
   "firestore": {
@@ -94,6 +128,10 @@
     "/users/{userId}": {
       "schema": "User",
       "description": "User profiles and roles"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Collection of customer orders"
     }
   }
 }

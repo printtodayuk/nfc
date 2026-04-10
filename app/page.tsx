@@ -242,7 +242,7 @@ export default function LandingPage() {
                             <span className="text-xs font-semibold text-primary uppercase tracking-wider">
                               {categories.find(c => c.id === product.categoryId)?.name}
                             </span>
-                            <span className="text-lg font-bold">${product.price.toFixed(2)}</span>
+                            <span className="text-lg font-bold">£{product.price.toFixed(2)}</span>
                           </div>
                           <CardTitle className="text-lg line-clamp-1 group-hover:text-primary transition-colors">{product.name}</CardTitle>
                           <CardDescription className="line-clamp-2 text-xs h-8">{product.description}</CardDescription>

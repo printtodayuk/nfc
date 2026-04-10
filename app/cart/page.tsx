@@ -3,13 +3,49 @@
 import { useCart } from '@/context/CartContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trash2, Plus, Minus, ShoppingBag, ArrowRight } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'motion/react';
+import { auth, db, handleFirestoreError, OperationType } from '@/lib/firebase';
+import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 export default function CartPage() {
   const { cart, removeFromCart, updateQuantity, totalPrice, totalItems, clearCart } = useCart();
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const router = useRouter();
+
+  const handleCheckout = async () => {
+    if (!auth.currentUser) {
+      toast.error('Please login to checkout');
+      return;
+    }
+
+    setIsCheckingOut(true);
+    try {
+      const orderData = {
+        userId: auth.currentUser.uid,
+        userEmail: auth.currentUser.email,
+        items: cart,
+        totalAmount: totalPrice,
+        status: 'pending',
+        createdAt: Timestamp.now(),
+        shippingAddress: '' // Could add a form for this later
+      };
+
+      await addDoc(collection(db, 'orders'), orderData);
+      toast.success('Order placed successfully!');
+      clearCart();
+      router.push('/orders');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'orders');
+    } finally {
+      setIsCheckingOut(false);
+    }
+  };
 
   if (cart.length === 0) {
     return (
@@ -63,7 +99,7 @@ export default function CartPage() {
                         {item.variant.size && <span>Size: {item.variant.size}</span>}
                       </div>
                     )}
-                    <p className="text-primary font-bold">${item.price.toFixed(2)}</p>
+                    <p className="text-primary font-bold">£{item.price.toFixed(2)}</p>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center border rounded-full px-2 py-1">
@@ -115,7 +151,7 @@ export default function CartPage() {
             <CardContent className="space-y-4">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal ({totalItems} items)</span>
-                <span>${totalPrice.toFixed(2)}</span>
+                <span>£{totalPrice.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Shipping</span>
@@ -123,12 +159,24 @@ export default function CartPage() {
               </div>
               <div className="border-t pt-4 flex justify-between font-bold text-lg">
                 <span>Total</span>
-                <span>${totalPrice.toFixed(2)}</span>
+                <span>£{totalPrice.toFixed(2)}</span>
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full rounded-full h-12 gap-2 text-lg">
-                Checkout <ArrowRight className="h-5 w-5" />
+              <Button 
+                className="w-full rounded-full h-12 gap-2 text-lg" 
+                onClick={handleCheckout}
+                disabled={isCheckingOut}
+              >
+                {isCheckingOut ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" /> Processing...
+                  </>
+                ) : (
+                  <>
+                    Checkout <ArrowRight className="h-5 w-5" />
+                  </>
+                )}
               </Button>
             </CardFooter>
           </Card>
