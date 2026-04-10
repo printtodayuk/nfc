@@ -727,7 +727,9 @@ export default function AdminPage() {
                         <div className="flex justify-end gap-2">
                           <Select 
                             value={order.status} 
-                            onValueChange={(val: Order['status']) => handleUpdateOrderStatus(order.id, val)}
+                            onValueChange={(val: Order['status'] | null) => {
+                              if (val) handleUpdateOrderStatus(order.id, val);
+                            }}
                           >
                             <SelectTrigger className="w-[130px] h-8 text-xs">
                               <SelectValue />
