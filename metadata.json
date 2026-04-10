@@ -1,5 +1,5 @@
 {
   "name": "Today AI E-Commerce",
-  "description": "A modern e-commerce platform with an integrated admin panel for easy product and category management.",
+  "description": "A premium e-commerce platform with multi-step checkout, Stripe payments, address management, and advanced admin controls for discounts and invoicing.",
   "requestFramePermissions": []
 }

@@ -11,7 +11,7 @@ import { ShoppingCart, ArrowLeft, Check, Star, ShieldCheck, Truck, RotateCcw } f
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
-import { cn } from '@/lib/utils';
+import { cn, calculateDiscountedPrice } from '@/lib/utils';
 import { toast } from 'sonner';
 
 interface Variant {
@@ -30,6 +30,11 @@ interface Product {
   images?: string[];
   stock: number;
   variants?: Variant[];
+  discount?: {
+    type: 'percentage' | 'fixed';
+    value: number;
+    active: boolean;
+  };
 }
 
 export default function ProductDetailsPage() {
@@ -81,10 +86,11 @@ export default function ProductDetailsPage() {
 
   const handleAddToCart = () => {
     if (!product) return;
+    const finalPrice = calculateDiscountedPrice(product.price, product.discount);
     addToCart({
       id: product.id,
       name: product.name,
-      price: product.price,
+      price: finalPrice,
       image: product.image,
       quantity: quantity,
       variant: {
@@ -164,8 +170,24 @@ export default function ProductDetailsPage() {
             </div>
           </div>
 
-          <div className="text-3xl font-bold text-primary">
-            £{product.price.toFixed(2)}
+          <div className="flex items-baseline gap-4">
+            {product.discount?.active ? (
+              <>
+                <div className="text-3xl font-bold text-destructive">
+                  £{calculateDiscountedPrice(product.price, product.discount).toFixed(2)}
+                </div>
+                <div className="text-xl text-muted-foreground line-through">
+                  £{product.price.toFixed(2)}
+                </div>
+                <Badge variant="destructive" className="animate-pulse">
+                  {product.discount.type === 'percentage' ? `${product.discount.value}% OFF` : `£${product.discount.value} OFF`}
+                </Badge>
+              </>
+            ) : (
+              <div className="text-3xl font-bold text-primary">
+                £{product.price.toFixed(2)}
+              </div>
+            )}
           </div>
 
           <p className="text-lg text-muted-foreground leading-relaxed">

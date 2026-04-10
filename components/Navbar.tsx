@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { useCart } from '@/context/CartContext';
+import Image from 'next/image';
 
 interface SiteSettings {
   navbarName?: string;
@@ -97,7 +98,15 @@ export default function Navbar() {
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2 font-bold text-xl tracking-tight">
             {settings?.logoUrl ? (
-              <img src={settings.logoUrl} alt="Logo" className="h-8 w-auto" />
+              <div className="relative h-8 w-16">
+                <Image 
+                  src={settings.logoUrl} 
+                  alt="Logo" 
+                  fill 
+                  className="object-contain" 
+                  referrerPolicy="no-referrer"
+                />
+              </div>
             ) : (
               <ShoppingBag className="h-6 w-6 text-primary" />
             )}

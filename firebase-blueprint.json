@@ -23,6 +23,14 @@
         "image": { "type": "string", "description": "Main product image URL" },
         "images": { "type": "array", "items": { "type": "string" }, "description": "Additional product image URLs" },
         "stock": { "type": "number", "description": "Total available stock" },
+        "discount": {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string", "enum": ["percentage", "fixed"] },
+            "value": { "type": "number" },
+            "active": { "type": "boolean" }
+          }
+        },
         "variants": { 
           "type": "array", 
           "items": {
@@ -54,6 +62,8 @@
         "contactEmail": { "type": "string" },
         "contactPhone": { "type": "string" },
         "contactAddress": { "type": "string" },
+        "stripePublicKey": { "type": "string" },
+        "stripeSecretKey": { "type": "string" },
         "footerLinks": { 
           "type": "array",
           "items": {
@@ -73,7 +83,23 @@
       "type": "object",
       "properties": {
         "email": { "type": "string", "format": "email" },
-        "role": { "type": "string", "enum": ["admin", "user"] }
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "addresses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "street": { "type": "string" },
+              "city": { "type": "string" },
+              "state": { "type": "string" },
+              "zip": { "type": "string" },
+              "country": { "type": "string" },
+              "isDefault": { "type": "boolean" }
+            }
+          }
+        }
       },
       "required": ["email", "role"]
     },
@@ -105,11 +131,24 @@
           }
         },
         "totalAmount": { "type": "number" },
+        "discountAmount": { "type": "number" },
         "status": { "type": "string", "enum": ["pending", "processing", "shipped", "delivered", "cancelled"] },
+        "paymentStatus": { "type": "string", "enum": ["unpaid", "paid", "failed"] },
+        "paymentIntentId": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" },
-        "shippingAddress": { "type": "string" }
+        "shippingAddress": { 
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "street": { "type": "string" },
+            "city": { "type": "string" },
+            "state": { "type": "string" },
+            "zip": { "type": "string" },
+            "country": { "type": "string" }
+          }
+        }
       },
-      "required": ["userId", "userEmail", "items", "totalAmount", "status", "createdAt"]
+      "required": ["userId", "userEmail", "items", "totalAmount", "status", "createdAt", "shippingAddress"]
     }
   },
   "firestore": {

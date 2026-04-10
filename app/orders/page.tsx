@@ -6,10 +6,22 @@ import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestor
 import { onAuthStateChanged } from 'firebase/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, ShoppingBag, Package, Truck, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Loader2, ShoppingBag, Package, Truck, CheckCircle, XCircle, Clock, FileText } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import Invoice from '@/components/Invoice';
+
+interface Address {
+  name: string;
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+  country: string;
+}
 
 interface OrderItem {
   id: string;
@@ -26,10 +38,12 @@ interface OrderItem {
 interface Order {
   id: string;
   userId: string;
+  userEmail: string;
   items: OrderItem[];
   totalAmount: number;
   status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   createdAt: any;
+  shippingAddress: Address;
 }
 
 export default function OrdersPage() {
@@ -160,10 +174,25 @@ export default function OrdersPage() {
                       <p className="text-sm text-muted-foreground">Total Amount</p>
                       <p className="text-lg font-bold">£{order.totalAmount.toFixed(2)}</p>
                     </div>
-                    <Badge className={`gap-2 py-1.5 px-3 border ${getStatusColor(order.status)}`} variant="outline">
-                      {getStatusIcon(order.status)}
-                      {order.status.toUpperCase()}
-                    </Badge>
+                    <div className="flex flex-col gap-2">
+                      <Badge className={`gap-2 py-1.5 px-3 border ${getStatusColor(order.status)}`} variant="outline">
+                        {getStatusIcon(order.status)}
+                        {order.status.toUpperCase()}
+                      </Badge>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-8 gap-2 text-xs">
+                            <FileText className="h-3 w-3" /> View Invoice
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle>Order Invoice</DialogTitle>
+                          </DialogHeader>
+                          <Invoice order={order} />
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                   </div>
                 </div>
               </CardHeader>

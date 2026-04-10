@@ -14,7 +14,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Plus, Trash2, Package, FolderPlus, Loader2, Edit, Settings, Image as ImageIcon, X, Facebook, Twitter, Instagram, Linkedin, Github, Mail, Phone, MapPin, ExternalLink, Play, Users, ShoppingCart as OrdersIcon, CheckCircle, Clock, Truck as ShippingIcon, XCircle } from 'lucide-react';
+import { Plus, Trash2, Package, FolderPlus, Loader2, Edit, Settings, Image as ImageIcon, X, Facebook, Twitter, Instagram, Linkedin, Github, Mail, Phone, MapPin, ExternalLink, Play, Users, ShoppingCart as OrdersIcon, CheckCircle, Clock, Truck as ShippingIcon, XCircle, FileText } from 'lucide-react';
+import Invoice from '@/components/Invoice';
+import Image from 'next/image';
 
 interface Category {
   id: string;
@@ -39,6 +41,11 @@ interface Product {
   images?: string[];
   stock: number;
   variants?: Variant[];
+  discount?: {
+    type: 'percentage' | 'fixed';
+    value: number;
+    active: boolean;
+  };
   createdAt: any;
 }
 
@@ -53,6 +60,8 @@ interface SiteSettings {
   contactEmail: string;
   contactPhone: string;
   contactAddress: string;
+  stripePublicKey?: string;
+  stripeSecretKey?: string;
   footerLinks: { label: string; url: string; icon?: string }[];
 }
 
@@ -84,7 +93,7 @@ interface Order {
   totalAmount: number;
   status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   createdAt: any;
-  shippingAddress?: string;
+  shippingAddress: any;
 }
 
 const AVAILABLE_ICONS = [
@@ -118,6 +127,8 @@ export default function AdminPage() {
     contactEmail: 'support@todayai.com',
     contactPhone: '+1 (555) 123-4567',
     contactAddress: '123 E-commerce St, Digital City',
+    stripePublicKey: '',
+    stripeSecretKey: '',
     footerLinks: []
   });
 
@@ -134,7 +145,12 @@ export default function AdminPage() {
     image: '',
     images: [] as string[],
     stock: '',
-    variants: [] as Variant[]
+    variants: [] as Variant[],
+    discount: {
+      type: 'percentage' as 'percentage' | 'fixed',
+      value: 0,
+      active: false
+    }
   });
   const [editingProd, setEditingProd] = useState<Product | null>(null);
   const [selectedFooterIcon, setSelectedFooterIcon] = useState('ExternalLink');
@@ -233,7 +249,8 @@ export default function AdminPage() {
         toast.success('Product added');
       }
       setProdForm({
-        name: '', description: '', price: '', categoryId: '', image: '', images: [], stock: '', variants: []
+        name: '', description: '', price: '', categoryId: '', image: '', images: [], stock: '', variants: [],
+        discount: { type: 'percentage', value: 0, active: false }
       });
       setEditingProd(null);
     } catch (error) {
@@ -368,6 +385,46 @@ export default function AdminPage() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Discount Section */}
+                  <div className="space-y-3 p-3 border rounded-lg bg-muted/30">
+                    <div className="flex items-center justify-between">
+                      <Label className="font-semibold">Discount</Label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">{prodForm.discount.active ? 'Active' : 'Inactive'}</span>
+                        <input 
+                          type="checkbox" 
+                          checked={prodForm.discount.active} 
+                          onChange={(e) => setProdForm({...prodForm, discount: {...prodForm.discount, active: e.target.checked}})}
+                          className="h-4 w-4"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="grid gap-2">
+                        <Label className="text-xs">Type</Label>
+                        <Select 
+                          value={prodForm.discount.type} 
+                          onValueChange={(val: 'percentage' | 'fixed') => setProdForm({...prodForm, discount: {...prodForm.discount, type: val}})}
+                        >
+                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="percentage">Percentage (%)</SelectItem>
+                            <SelectItem value="fixed">Fixed Amount (£)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid gap-2">
+                        <Label className="text-xs">Value</Label>
+                        <Input 
+                          type="number" 
+                          className="h-8 text-xs"
+                          value={prodForm.discount.value} 
+                          onChange={(e) => setProdForm({...prodForm, discount: {...prodForm.discount, value: parseFloat(e.target.value) || 0}})}
+                        />
+                      </div>
+                    </div>
+                  </div>
                   <div className="grid gap-2">
                     <Label>Main Image URL</Label>
                     <Input value={prodForm.image} onChange={(e) => setProdForm({...prodForm, image: e.target.value})} placeholder="https://..." />
@@ -383,8 +440,8 @@ export default function AdminPage() {
                     <div className="flex flex-wrap gap-2">
                       {prodForm.images.map((img, i) => (
                         <div key={i} className="relative h-12 w-12 rounded border overflow-hidden">
-                          <img src={img} className="h-full w-full object-cover" />
-                          <button type="button" onClick={() => removeImage(i)} className="absolute top-0 right-0 bg-destructive text-white p-0.5"><X className="h-3 w-3" /></button>
+                          <Image src={img} alt={`Product ${i}`} fill className="object-cover" referrerPolicy="no-referrer" />
+                          <button type="button" onClick={() => removeImage(i)} className="absolute top-0 right-0 bg-destructive text-white p-0.5 z-10"><X className="h-3 w-3" /></button>
                         </div>
                       ))}
                     </div>
@@ -440,8 +497,8 @@ export default function AdminPage() {
                         <TableRow key={prod.id}>
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 rounded bg-muted overflow-hidden flex-shrink-0">
-                                <img src={prod.image} className="h-full w-full object-cover" />
+                              <div className="relative h-10 w-10 rounded bg-muted overflow-hidden flex-shrink-0">
+                                <Image src={prod.image || ''} alt={prod.name} fill className="object-cover" referrerPolicy="no-referrer" />
                               </div>
                               <span>{prod.name}</span>
                             </div>
@@ -462,7 +519,8 @@ export default function AdminPage() {
                                 image: prod.image || '',
                                 images: prod.images || [],
                                 stock: prod.stock.toString(),
-                                variants: prod.variants || []
+                                variants: prod.variants || [],
+                                discount: prod.discount || { type: 'percentage', value: 0, active: false }
                               });
                             }}>
                               <Edit className="h-4 w-4 text-blue-500" />
@@ -619,6 +677,33 @@ export default function AdminPage() {
                     </div>
                   </div>
 
+                  {/* Stripe Section */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold border-b pb-2">Stripe Payment Gateway</h3>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label>Stripe Public Key (Publishable Key)</Label>
+                        <Input 
+                          value={siteSettings.stripePublicKey || ''} 
+                          onChange={e => setSiteSettings({...siteSettings, stripePublicKey: e.target.value})} 
+                          placeholder="pk_test_..."
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label>Stripe Secret Key</Label>
+                        <Input 
+                          type="password"
+                          value={siteSettings.stripeSecretKey || ''} 
+                          onChange={e => setSiteSettings({...siteSettings, stripeSecretKey: e.target.value})} 
+                          placeholder="sk_test_..."
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Note: These keys are stored in Firestore. Ensure your security rules are correctly configured.
+                    </p>
+                  </div>
+
                   {/* Footer Section */}
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold border-b pb-2">Footer & Quick Links</h3>
@@ -742,6 +827,19 @@ export default function AdminPage() {
                               <SelectItem value="cancelled">Cancelled</SelectItem>
                             </SelectContent>
                           </Select>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <FileText className="h-4 w-4 text-blue-500" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                              <DialogHeader>
+                                <DialogTitle>Order Invoice</DialogTitle>
+                              </DialogHeader>
+                              <Invoice order={order} />
+                            </DialogContent>
+                          </Dialog>
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete('orders', order.id)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -779,7 +877,9 @@ export default function AdminPage() {
                         <div className="flex items-center gap-3">
                           <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                             {user.photoURL ? (
-                              <img src={user.photoURL} alt="" className="h-full w-full rounded-full object-cover" />
+                              <div className="relative h-full w-full">
+                                <Image src={user.photoURL} alt={user.displayName || 'User'} fill className="rounded-full object-cover" referrerPolicy="no-referrer" />
+                              </div>
                             ) : (
                               <Users className="h-4 w-4 text-primary" />
                             )}

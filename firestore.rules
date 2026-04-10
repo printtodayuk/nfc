@@ -90,7 +90,7 @@ service cloud.firestore {
     }
 
     function isValidProduct(data) {
-      return hasOnlyAllowedFields(['name', 'description', 'price', 'categoryId', 'image', 'images', 'stock', 'variants', 'createdAt']) &&
+      return hasOnlyAllowedFields(['name', 'description', 'price', 'categoryId', 'image', 'images', 'stock', 'variants', 'createdAt', 'discount']) &&
              data.name is string && data.name.size() > 0 && data.name.size() <= 200 &&
              (!('description' in data) || (data.description is string && data.description.size() <= 2000)) &&
              data.price is number && data.price >= 0 &&
@@ -99,11 +99,17 @@ service cloud.firestore {
              (!('images' in data) || data.images is list) &&
              data.stock is number && data.stock >= 0 &&
              (!('variants' in data) || data.variants is list) &&
-             data.createdAt is timestamp;
+             data.createdAt is timestamp &&
+             (!('discount' in data) || (
+               data.discount is map &&
+               data.discount.type in ['percentage', 'fixed'] &&
+               data.discount.value is number &&
+               data.discount.active is bool
+             ));
     }
 
     function isValidSettings(data) {
-      return hasOnlyAllowedFields(['navbarName', 'logoUrl', 'heroTitle', 'heroSubtitle', 'heroMediaUrl', 'heroMediaType', 'footerText', 'contactEmail', 'contactPhone', 'contactAddress', 'footerLinks']) &&
+      return hasOnlyAllowedFields(['navbarName', 'logoUrl', 'heroTitle', 'heroSubtitle', 'heroMediaUrl', 'heroMediaType', 'footerText', 'contactEmail', 'contactPhone', 'contactAddress', 'footerLinks', 'stripePublicKey', 'stripeSecretKey']) &&
              (!('navbarName' in data) || data.navbarName is string) &&
              (!('logoUrl' in data) || isValidUrl(data.logoUrl)) &&
              (!('heroTitle' in data) || data.heroTitle is string) &&
@@ -114,23 +120,30 @@ service cloud.firestore {
              (!('contactEmail' in data) || data.contactEmail is string) &&
              (!('contactPhone' in data) || data.contactPhone is string) &&
              (!('contactAddress' in data) || data.contactAddress is string) &&
+             (!('stripePublicKey' in data) || data.stripePublicKey is string) &&
+             (!('stripeSecretKey' in data) || data.stripeSecretKey is string) &&
              (!('footerLinks' in data) || data.footerLinks is list);
     }
 
     function isValidUser(data) {
-      return hasOnlyAllowedFields(['email', 'role']) &&
+      return hasOnlyAllowedFields(['email', 'role', 'addresses']) &&
              isValidEmail(data.email) &&
-             data.role in ['admin', 'user'];
+             data.role in ['admin', 'user'] &&
+             (!('addresses' in data) || data.addresses is list);
     }
 
     function isValidOrder(data) {
-      return hasOnlyAllowedFields(['userId', 'userEmail', 'items', 'totalAmount', 'status', 'createdAt', 'shippingAddress']) &&
+      return hasOnlyAllowedFields(['userId', 'userEmail', 'items', 'totalAmount', 'discountAmount', 'status', 'paymentStatus', 'paymentIntentId', 'createdAt', 'shippingAddress']) &&
              data.userId is string &&
              isValidEmail(data.userEmail) &&
              data.items is list &&
              data.totalAmount is number && data.totalAmount >= 0 &&
+             (!('discountAmount' in data) || data.discountAmount is number) &&
              data.status in ['pending', 'processing', 'shipped', 'delivered', 'cancelled'] &&
-             data.createdAt is timestamp;
+             (!('paymentStatus' in data) || data.paymentStatus in ['unpaid', 'paid', 'failed']) &&
+             (!('paymentIntentId' in data) || data.paymentIntentId is string) &&
+             data.createdAt is timestamp &&
+             data.shippingAddress is map;
     }
 
     // ===============================================================
