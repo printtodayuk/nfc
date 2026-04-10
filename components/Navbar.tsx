@@ -110,6 +110,14 @@ export default function Navbar() {
             >
               Shop
             </Link>
+            {user && (
+              <Link 
+                href="/orders" 
+                className={`text-sm font-medium transition-colors hover:text-primary ${pathname === '/orders' ? 'text-primary' : 'text-muted-foreground'}`}
+              >
+                My Orders
+              </Link>
+            )}
             {isAdmin && (
               <Link 
                 href="/admin" 
