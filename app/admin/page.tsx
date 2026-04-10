@@ -531,7 +531,7 @@ export default function AdminPage() {
                       </div>
                       <div className="grid gap-2">
                         <Label>Media Type</Label>
-                        <Select value={siteSettings.heroMediaType} onValueChange={(val: 'image' | 'video') => setSiteSettings({...siteSettings, heroMediaType: val || 'image'})}>
+                        <Select value={siteSettings.heroMediaType} onValueChange={(val: 'image' | 'video' | null) => setSiteSettings({...siteSettings, heroMediaType: val || 'image'})}>
                           <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="image">Image</SelectItem>
