@@ -1,0 +1,99 @@
+{
+  "entities": {
+    "Category": {
+      "title": "Category",
+      "description": "Product category",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Category name" },
+        "description": { "type": "string", "description": "Category description" },
+        "image": { "type": "string", "description": "Category image URL" }
+      },
+      "required": ["name"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "E-commerce product",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Product name" },
+        "description": { "type": "string", "description": "Product description" },
+        "price": { "type": "number", "description": "Product price" },
+        "categoryId": { "type": "string", "description": "Reference to Category ID" },
+        "image": { "type": "string", "description": "Main product image URL" },
+        "images": { "type": "array", "items": { "type": "string" }, "description": "Additional product image URLs" },
+        "stock": { "type": "number", "description": "Total available stock" },
+        "variants": { 
+          "type": "array", 
+          "items": {
+            "type": "object",
+            "properties": {
+              "color": { "type": "string" },
+              "size": { "type": "string" },
+              "stock": { "type": "number" }
+            }
+          },
+          "description": "Product variants with specific stock"
+        },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["name", "price", "categoryId"]
+    },
+    "SiteSettings": {
+      "title": "Site Settings",
+      "description": "Global application settings",
+      "type": "object",
+      "properties": {
+        "navbarName": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "heroTitle": { "type": "string" },
+        "heroSubtitle": { "type": "string" },
+        "heroMediaUrl": { "type": "string" },
+        "heroMediaType": { "type": "string", "enum": ["image", "video"] },
+        "footerText": { "type": "string" },
+        "contactEmail": { "type": "string" },
+        "contactPhone": { "type": "string" },
+        "contactAddress": { "type": "string" },
+        "footerLinks": { 
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": { "type": "string" },
+              "url": { "type": "string" },
+              "icon": { "type": "string", "description": "Lucide icon name" }
+            }
+          }
+        }
+      }
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile and roles",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["admin", "user"] }
+      },
+      "required": ["email", "role"]
+    }
+  },
+  "firestore": {
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Collection of product categories"
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Collection of products"
+    },
+    "/settings/{settingId}": {
+      "schema": "SiteSettings",
+      "description": "Global application settings"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles and roles"
+    }
+  }
+}
