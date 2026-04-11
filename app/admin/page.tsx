@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { Plus, Trash2, Package, FolderPlus, Loader2, Edit, Settings, Image as ImageIcon, X, Facebook, Twitter, Instagram, Linkedin, Github, Mail, Phone, MapPin, ExternalLink, Play, Users, ShoppingCart as OrdersIcon, CheckCircle, Clock, Truck as ShippingIcon, XCircle, FileText } from 'lucide-react';
 import Invoice from '@/components/Invoice';
 import Image from 'next/image';
+import { cn, calculateDiscountedPrice } from '@/lib/utils';
 
 interface Category {
   id: string;
@@ -400,22 +401,26 @@ export default function AdminPage() {
                   </div>
 
                   {/* Discount Section */}
-                  <div className="space-y-3 p-3 border rounded-lg bg-muted/30">
+                  <div className={cn("space-y-3 p-4 border-2 rounded-xl transition-all", prodForm.discount.active ? "border-destructive/50 bg-destructive/5" : "border-muted bg-muted/30")}>
                     <div className="flex items-center justify-between">
-                      <Label className="font-semibold">Discount</Label>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">{prodForm.discount.active ? 'Active' : 'Inactive'}</span>
+                      <div className="flex flex-col">
+                        <Label className="font-bold">Discount Settings</Label>
+                        <span className="text-[10px] text-muted-foreground">Apply a price reduction to this product</span>
+                      </div>
+                      <div className="flex items-center gap-2 bg-background px-3 py-1 rounded-full border shadow-sm">
+                        <Label htmlFor="discount-active" className="text-xs font-semibold cursor-pointer">{prodForm.discount.active ? 'ACTIVE' : 'INACTIVE'}</Label>
                         <input 
+                          id="discount-active"
                           type="checkbox" 
                           checked={prodForm.discount.active} 
                           onChange={(e) => setProdForm({...prodForm, discount: {...prodForm.discount, active: e.target.checked}})}
-                          className="h-4 w-4"
+                          className="h-4 w-4 accent-destructive cursor-pointer"
                         />
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="grid gap-2">
-                        <Label className="text-xs">Type</Label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-1.5">
+                        <Label className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Type</Label>
                         <Select 
                           value={prodForm.discount.type} 
                           onValueChange={(val: 'percentage' | 'fixed' | null) => {
@@ -424,23 +429,32 @@ export default function AdminPage() {
                             }
                           }}
                         >
-                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="percentage">Percentage (%)</SelectItem>
                             <SelectItem value="fixed">Fixed Amount (£)</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="grid gap-2">
-                        <Label className="text-xs">Value</Label>
+                      <div className="grid gap-1.5">
+                        <Label className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Value</Label>
                         <Input 
                           type="number" 
-                          className="h-8 text-xs"
+                          className="h-9 text-sm"
                           value={prodForm.discount.value} 
                           onChange={(e) => setProdForm({...prodForm, discount: {...prodForm.discount, value: parseFloat(e.target.value) || 0}})}
+                          placeholder="0"
                         />
                       </div>
                     </div>
+                    {prodForm.discount.active && parseFloat(prodForm.price) > 0 && (
+                      <div className="pt-2 border-t border-destructive/20 mt-2 flex justify-between items-center">
+                        <span className="text-xs font-medium">Preview Price:</span>
+                        <span className="text-sm font-bold text-destructive">
+                          £{calculateDiscountedPrice(parseFloat(prodForm.price), prodForm.discount).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <div className="grid gap-2">
                     <Label>Main Image URL</Label>
@@ -520,7 +534,18 @@ export default function AdminPage() {
                               <span>{prod.name}</span>
                             </div>
                           </TableCell>
-                          <TableCell>£{prod.price.toFixed(2)}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              {prod.discount?.active ? (
+                                <>
+                                  <span className="text-xs text-muted-foreground line-through">£{prod.price.toFixed(2)}</span>
+                                  <span className="font-bold text-destructive">£{calculateDiscountedPrice(prod.price, prod.discount).toFixed(2)}</span>
+                                </>
+                              ) : (
+                                <span>£{prod.price.toFixed(2)}</span>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell>
                             <Badge variant={prod.stock > 0 ? "outline" : "destructive"}>{prod.stock}</Badge>
                             {prod.variants && prod.variants.length > 0 && <span className="ml-2 text-[10px] text-muted-foreground">({prod.variants.length} variants)</span>}
