@@ -65,12 +65,25 @@ interface SiteSettings {
   footerLinks: { label: string; url: string; icon?: string }[];
 }
 
+interface Address {
+  id: string;
+  name: string;
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+  country: string;
+  phone: string;
+  isDefault: boolean;
+}
+
 interface UserProfile {
   id: string;
   email: string;
   role: 'admin' | 'user';
   displayName?: string;
   photoURL?: string;
+  addresses?: Address[];
 }
 
 interface OrderItem {
