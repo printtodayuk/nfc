@@ -17,7 +17,7 @@ function PopoverTrigger({
   return (
     <PopoverPrimitive.Trigger
       data-slot="popover-trigger"
-      render={asChild ? children : undefined}
+      render={asChild ? (children as React.ReactElement) : undefined}
       {...props}
     >
       {asChild ? undefined : children}
