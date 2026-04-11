@@ -474,7 +474,7 @@ export default function AdminPage() {
                     <Button type="submit" className="flex-grow gap-2">
                       {editingProd ? 'Update Product' : 'Add Product'}
                     </Button>
-                    {editingProd && <Button type="button" variant="ghost" onClick={() => { setEditingProd(null); setProdForm({name:'', description:'', price:'', categoryId:'', image:'', images:[], stock:'', variants:[]}); }}>Cancel</Button>}
+                    {editingProd && <Button type="button" variant="ghost" onClick={() => { setEditingProd(null); setProdForm({name:'', description:'', price:'', categoryId:'', image:'', images:[], stock:'', variants:[], discount: { type: 'percentage', value: 0, active: false }}); }}>Cancel</Button>}
                   </div>
                 </form>
               </CardContent>
