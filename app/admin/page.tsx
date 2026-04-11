@@ -405,7 +405,11 @@ export default function AdminPage() {
                         <Label className="text-xs">Type</Label>
                         <Select 
                           value={prodForm.discount.type} 
-                          onValueChange={(val: 'percentage' | 'fixed') => setProdForm({...prodForm, discount: {...prodForm.discount, type: val}})}
+                          onValueChange={(val: 'percentage' | 'fixed' | null) => {
+                            if (val) {
+                              setProdForm({...prodForm, discount: {...prodForm.discount, type: val}});
+                            }
+                          }}
                         >
                           <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                           <SelectContent>

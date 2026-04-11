@@ -9,13 +9,14 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, db, handleFirestoreError, OperationType } from '@/lib/firebase';
-import { collection, addDoc, Timestamp, doc, getDoc, updateDoc, runTransaction, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, Timestamp, doc, getDoc, updateDoc, runTransaction, onSnapshot, setDoc } from 'firebase/firestore';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import CheckoutForm from '@/components/CheckoutForm';
@@ -32,12 +33,14 @@ interface Address {
 }
 
 interface UserProfile {
+  email: string;
+  role: string;
   addresses: Address[];
 }
 
 export default function CartPage() {
   const { cart, removeFromCart, updateQuantity, totalPrice, totalItems, clearCart } = useCart();
-  const [step, setStep] = useState(0); // 0: Review, 1: Address, 2: Payment
+  const [step, setStep] = useState(0); // 0: Review, 1: Payment
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [selectedAddressId, setSelectedAddressId] = useState<string>('');
@@ -45,6 +48,7 @@ export default function CartPage() {
     name: '', street: '', city: '', state: '', zip: '', country: 'UK'
   });
   const [showNewAddressForm, setShowNewAddressForm] = useState(false);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [stripePromise, setStripePromise] = useState<any>(null);
   const [clientSecret, setClientSecret] = useState<string>('');
   const [loadingStripe, setLoadingStripe] = useState(false);
@@ -83,59 +87,77 @@ export default function CartPage() {
         toast.error('Please login to continue');
         return;
       }
-      setStep(1);
-    } else if (step === 1) {
-      if (!selectedAddressId && !showNewAddressForm) {
-        toast.error('Please select or add a shipping address');
+      setIsAddressModalOpen(true);
+    }
+  };
+
+  const handleAddressConfirmed = async () => {
+    const isAddingNew = showNewAddressForm || !userProfile?.addresses?.length;
+    
+    if (!selectedAddressId && !isAddingNew) {
+      toast.error('Please select or add a shipping address');
+      return;
+    }
+    
+    let finalAddressId = selectedAddressId;
+    
+    if (isAddingNew) {
+      if (!newAddress.name || !newAddress.street || !newAddress.city || !newAddress.zip) {
+        toast.error('Please fill in all required address fields');
         return;
       }
       
-      let finalAddressId = selectedAddressId;
+      // Save new address
+      const addrId = Math.random().toString(36).substr(2, 9);
+      const addr: Address = { ...newAddress, id: addrId, isDefault: !userProfile?.addresses?.length };
       
-      if (showNewAddressForm) {
-        if (!newAddress.name || !newAddress.street || !newAddress.city || !newAddress.zip) {
-          toast.error('Please fill in all required address fields');
-          return;
-        }
-        
-        // Save new address
-        const addrId = Math.random().toString(36).substr(2, 9);
-        const addr: Address = { ...newAddress, id: addrId, isDefault: !userProfile?.addresses?.length };
-        
-        try {
-          const userRef = doc(db, 'users', auth.currentUser!.uid);
-          await updateDoc(userRef, {
-            addresses: [...(userProfile?.addresses || []), addr]
-          });
-          finalAddressId = addrId;
-          setSelectedAddressId(addrId);
-          setShowNewAddressForm(false);
-        } catch (error) {
-          toast.error('Failed to save address');
-          return;
-        }
-      }
-
-      // Initialize Stripe Payment Intent
-      setLoadingStripe(true);
       try {
-        const response = await fetch('/api/create-payment-intent', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: totalPrice }),
-        });
-        const data = await response.json();
-        if (data.clientSecret) {
-          setClientSecret(data.clientSecret);
-          setStep(2);
-        } else {
-          toast.error(data.error || 'Failed to initialize payment');
+        const userRef = doc(db, 'users', auth.currentUser!.uid);
+        const email = auth.currentUser?.email;
+        
+        if (!email) {
+          toast.error('User email not found. Please try logging in again.');
+          return;
         }
+
+        // Use setDoc with merge to ensure doc exists and fields are valid
+        await setDoc(userRef, {
+          email: email,
+          role: userProfile?.role || 'user',
+          addresses: [...(userProfile?.addresses || []), addr]
+        }, { merge: true });
+        
+        finalAddressId = addrId;
+        setSelectedAddressId(addrId);
+        setShowNewAddressForm(false);
       } catch (error) {
-        toast.error('Payment initialization failed');
-      } finally {
-        setLoadingStripe(false);
+        handleFirestoreError(error, OperationType.WRITE, `users/${auth.currentUser?.uid}`);
+        toast.error('Failed to save address. Please try again.');
+        return;
       }
+    }
+
+    setIsAddressModalOpen(false);
+    
+    // Initialize Stripe Payment Intent
+    setLoadingStripe(true);
+    try {
+      const response = await fetch('/api/create-payment-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: totalPrice }),
+      });
+      const data = await response.json();
+      if (data.clientSecret) {
+        setClientSecret(data.clientSecret);
+        setStep(1); // Move to Payment step
+      } else {
+        toast.error(data.error || 'Failed to initialize payment');
+      }
+    } catch (error) {
+      toast.error('Payment initialization failed');
+    } finally {
+      setLoadingStripe(false);
     }
   };
 
@@ -216,7 +238,7 @@ export default function CartPage() {
           </Button>
         )}
         <h1 className="text-3xl font-bold">
-          {step === 0 ? 'Your Shopping Cart' : step === 1 ? 'Shipping Address' : 'Payment'}
+          {step === 0 ? 'Your Shopping Cart' : 'Payment'}
         </h1>
       </div>
       
@@ -295,78 +317,6 @@ export default function CartPage() {
 
           {step === 1 && (
             <div className="space-y-6">
-              {userProfile?.addresses && userProfile.addresses.length > 0 && !showNewAddressForm && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Select a saved address</h3>
-                  <RadioGroup value={selectedAddressId} onValueChange={setSelectedAddressId}>
-                    <div className="grid gap-4">
-                      {userProfile.addresses.map((addr) => (
-                        <div key={addr.id} className="flex items-center space-x-3 border p-4 rounded-lg cursor-pointer hover:bg-muted/50">
-                          <RadioGroupItem value={addr.id} id={addr.id} />
-                          <Label htmlFor={addr.id} className="flex-grow cursor-pointer">
-                            <div className="font-bold">{addr.name}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {addr.street}, {addr.city}, {addr.state} {addr.zip}, {addr.country}
-                            </div>
-                          </Label>
-                          {addr.isDefault && <Badge variant="secondary">Default</Badge>}
-                        </div>
-                      ))}
-                    </div>
-                  </RadioGroup>
-                  <Button variant="outline" className="w-full" onClick={() => setShowNewAddressForm(true)}>
-                    <Plus className="h-4 w-4 mr-2" /> Add New Address
-                  </Button>
-                </div>
-              )}
-
-              {(showNewAddressForm || !userProfile?.addresses?.length) && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Add Shipping Address</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid gap-2">
-                      <Label>Full Name</Label>
-                      <Input value={newAddress.name} onChange={e => setNewAddress({...newAddress, name: e.target.value})} placeholder="John Doe" />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label>Street Address</Label>
-                      <Input value={newAddress.street} onChange={e => setNewAddress({...newAddress, street: e.target.value})} placeholder="123 Main St" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="grid gap-2">
-                        <Label>City</Label>
-                        <Input value={newAddress.city} onChange={e => setNewAddress({...newAddress, city: e.target.value})} placeholder="London" />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label>State / County</Label>
-                        <Input value={newAddress.state} onChange={e => setNewAddress({...newAddress, state: e.target.value})} placeholder="Greater London" />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="grid gap-2">
-                        <Label>Postcode</Label>
-                        <Input value={newAddress.zip} onChange={e => setNewAddress({...newAddress, zip: e.target.value})} placeholder="SW1A 1AA" />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label>Country</Label>
-                        <Input value={newAddress.country} onChange={e => setNewAddress({...newAddress, country: e.target.value})} placeholder="UK" />
-                      </div>
-                    </div>
-                  </CardContent>
-                  {userProfile?.addresses?.length > 0 && (
-                    <CardFooter>
-                      <Button variant="ghost" onClick={() => setShowNewAddressForm(false)}>Cancel</Button>
-                    </CardFooter>
-                  )}
-                </Card>
-              )}
-            </div>
-          )}
-
-          {step === 2 && (
-            <div className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -413,12 +363,12 @@ export default function CartPage() {
                 <span className="text-muted-foreground">Shipping</span>
                 <span className="text-green-600 font-medium">Free</span>
               </div>
-              <div className="border-t pt-4 flex justify-between font-bold text-lg">
+              <div className="flex justify-between font-bold text-lg border-t pt-4">
                 <span>Total</span>
                 <span>£{totalPrice.toFixed(2)}</span>
               </div>
             </CardContent>
-            {step < 2 && (
+            {step === 0 && (
               <CardFooter>
                 <Button 
                   className="w-full rounded-full h-12 gap-2 text-lg" 
@@ -431,7 +381,7 @@ export default function CartPage() {
                     </>
                   ) : (
                     <>
-                      {step === 0 ? 'Proceed to Shipping' : 'Proceed to Payment'} 
+                      Proceed to Checkout
                       <ArrowRight className="h-5 w-5" />
                     </>
                   )}
@@ -440,20 +390,111 @@ export default function CartPage() {
             )}
           </Card>
           
-          {step === 1 && userProfile?.addresses?.length > 0 && (
+          {step === 1 && selectedAddressId && (
             <div className="p-4 border rounded-lg bg-muted/10">
               <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
                 <MapPin className="h-4 w-4" /> Shipping to:
               </h4>
               <p className="text-xs text-muted-foreground">
-                {userProfile.addresses.find(a => a.id === selectedAddressId)?.name}<br />
-                {userProfile.addresses.find(a => a.id === selectedAddressId)?.street}<br />
-                {userProfile.addresses.find(a => a.id === selectedAddressId)?.city}, {userProfile.addresses.find(a => a.id === selectedAddressId)?.zip}
+                {userProfile?.addresses.find(a => a.id === selectedAddressId)?.name}<br />
+                {userProfile?.addresses.find(a => a.id === selectedAddressId)?.street}<br />
+                {userProfile?.addresses.find(a => a.id === selectedAddressId)?.city}, {userProfile?.addresses.find(a => a.id === selectedAddressId)?.zip}
               </p>
             </div>
           )}
         </div>
       </div>
+
+      <Dialog open={isAddressModalOpen} onOpenChange={setIsAddressModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Select Shipping Address</DialogTitle>
+          </DialogHeader>
+          
+          <div className="py-4 space-y-6">
+            {userProfile?.addresses && userProfile.addresses.length > 0 && !showNewAddressForm && (
+              <div className="space-y-4">
+                <RadioGroup value={selectedAddressId} onValueChange={setSelectedAddressId}>
+                  <div className="grid gap-4">
+                    {userProfile.addresses.map((addr) => (
+                      <div key={addr.id} className="flex items-center space-x-3 border p-4 rounded-lg cursor-pointer hover:bg-muted/50">
+                        <RadioGroupItem value={addr.id} id={`modal-${addr.id}`} />
+                        <Label htmlFor={`modal-${addr.id}`} className="flex-grow cursor-pointer">
+                          <div className="font-bold">{addr.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {addr.street}, {addr.city}, {addr.state} {addr.zip}, {addr.country}
+                          </div>
+                        </Label>
+                        {addr.isDefault && <Badge variant="secondary">Default</Badge>}
+                      </div>
+                    ))}
+                  </div>
+                </RadioGroup>
+                <Button variant="outline" className="w-full" onClick={() => setShowNewAddressForm(true)}>
+                  <Plus className="h-4 w-4 mr-2" /> Add New Address
+                </Button>
+              </div>
+            )}
+
+            {(showNewAddressForm || !userProfile?.addresses?.length) && (
+              <div className="space-y-4">
+                <div className="grid gap-4">
+                  <div className="grid gap-2">
+                    <Label>Full Name</Label>
+                    <Input value={newAddress.name} onChange={e => setNewAddress({...newAddress, name: e.target.value})} placeholder="John Doe" />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Street Address</Label>
+                    <Input value={newAddress.street} onChange={e => setNewAddress({...newAddress, street: e.target.value})} placeholder="123 Main St" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label>City</Label>
+                      <Input value={newAddress.city} onChange={e => setNewAddress({...newAddress, city: e.target.value})} placeholder="London" />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>State / County</Label>
+                      <Input value={newAddress.state} onChange={e => setNewAddress({...newAddress, state: e.target.value})} placeholder="Greater London" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label>Postcode</Label>
+                      <Input value={newAddress.zip} onChange={e => setNewAddress({...newAddress, zip: e.target.value})} placeholder="SW1A 1AA" />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Country</Label>
+                      <Input value={newAddress.country} onChange={e => setNewAddress({...newAddress, country: e.target.value})} placeholder="UK" />
+                    </div>
+                  </div>
+                </div>
+                {userProfile?.addresses && userProfile.addresses.length > 0 && (
+                  <Button variant="ghost" className="w-full" onClick={() => setShowNewAddressForm(false)}>Back to saved addresses</Button>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button 
+              className="w-full rounded-full h-12 gap-2" 
+              onClick={handleAddressConfirmed}
+              disabled={loadingStripe}
+            >
+              {loadingStripe ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" /> Initializing Payment...
+                </>
+              ) : (
+                <>
+                  Confirm Address & Proceed to Payment
+                  <ArrowRight className="h-5 w-5" />
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

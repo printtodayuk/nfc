@@ -126,9 +126,9 @@ service cloud.firestore {
     }
 
     function isValidUser(data) {
-      return hasOnlyAllowedFields(['email', 'role', 'addresses']) &&
-             isValidEmail(data.email) &&
-             data.role in ['admin', 'user'] &&
+      return data.keys().hasOnly(['email', 'role', 'addresses', 'displayName', 'photoURL', 'uid', 'createdAt']) &&
+             (!('email' in data) || isValidEmail(data.email)) &&
+             (!('role' in data) || data.role in ['admin', 'user']) &&
              (!('addresses' in data) || data.addresses is list);
     }
 
@@ -170,7 +170,13 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
-      allow create, update: if isAuthenticated() && (request.auth.uid == userId) && isValidUser(request.resource.data) && (request.resource.data.role == 'user' || isAdmin());
+      allow create: if isAuthenticated() && (request.auth.uid == userId) && 
+                      isValidUser(request.resource.data) && 
+                      request.resource.data.email is string &&
+                      request.resource.data.role == 'user';
+      allow update: if isAuthenticated() && (request.auth.uid == userId) && 
+                      isValidUser(request.resource.data) && 
+                      (request.resource.data.role == resource.data.role || isAdmin());
       allow delete: if isAdmin();
     }
 

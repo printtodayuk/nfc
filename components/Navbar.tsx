@@ -34,6 +34,10 @@ export default function Navbar() {
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
+        if (!currentUser.email) {
+          console.error("User email not found");
+          return;
+        }
         const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
         if (!userDoc.exists()) {
           const role = currentUser.email === 'printtodayuk@gmail.com' ? 'admin' : 'user';
