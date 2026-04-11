@@ -10,8 +10,8 @@ import { CartProvider } from "@/context/CartContext";
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
-  title: 'Today AI | Modern E-Commerce',
-  description: 'Your one-stop shop for digital business cards.',
+  title: 'SwiftShop | Modern E-Commerce',
+  description: 'Your one-stop shop for everything.',
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {

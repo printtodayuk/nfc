@@ -5,12 +5,14 @@ import { usePathname } from 'next/navigation';
 import { ShoppingBag, User, LogIn, LogOut, LayoutDashboard, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { auth, db } from '@/lib/firebase';
-import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { useCart } from '@/context/CartContext';
 import Image from 'next/image';
+import AuthModal from './AuthModal';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface SiteSettings {
   navbarName?: string;
@@ -23,6 +25,7 @@ export default function Navbar() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const { totalItems } = useCart();
 
   useEffect(() => {
@@ -66,26 +69,6 @@ export default function Navbar() {
     };
   }, []);
 
-  const handleLogin = async () => {
-    try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-      toast.success('Logged in successfully');
-    } catch (error: any) {
-      console.error("Login error:", error);
-      if (error.code === 'auth/popup-closed-by-user') {
-        toast.info('Login cancelled. The popup was closed.');
-        return;
-      }
-      if (error.code === 'auth/cancelled-popup-request') return; 
-      if (error.code === 'auth/popup-blocked') {
-        toast.error('Popup blocked. Please allow popups for this site.');
-        return;
-      }
-      toast.error('Failed to login. Please try again.');
-    }
-  };
-
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -97,7 +80,8 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <>
+      <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2 font-bold text-xl tracking-tight">
@@ -154,17 +138,55 @@ export default function Navbar() {
             </Button>
           </Link>
           {user ? (
-            <div className="flex items-center gap-4">
-              <div className="hidden sm:flex flex-col items-end">
-                <span className="text-sm font-medium">{user.displayName}</span>
-                <span className="text-xs text-muted-foreground">{isAdmin ? 'Administrator' : 'Customer'}</span>
-              </div>
-              <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout">
-                <LogOut className="h-5 w-5" />
-              </Button>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                  {user.photoURL ? (
+                    <Image src={user.photoURL} alt={user.displayName || ''} fill className="rounded-full object-cover" referrerPolicy="no-referrer" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center rounded-full bg-muted">
+                      <User className="h-5 w-5" />
+                    </div>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{user.displayName}</p>
+                    <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/profile" className="cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    Profile Settings
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/orders" className="cursor-pointer">
+                    <ShoppingCart className="mr-2 h-4 w-4" />
+                    My Orders
+                  </Link>
+                </DropdownMenuItem>
+                {isAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin" className="cursor-pointer">
+                      <LayoutDashboard className="mr-2 h-4 w-4" />
+                      Admin Panel
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:text-destructive">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
-            <Button onClick={handleLogin} className="gap-2">
+            <Button onClick={() => setIsAuthModalOpen(true)} className="gap-2">
               <LogIn className="h-4 w-4" />
               Login
             </Button>
@@ -172,5 +194,7 @@ export default function Navbar() {
         </div>
       </div>
     </nav>
+    <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+    </>
   );
 }

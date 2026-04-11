@@ -872,6 +872,7 @@ export default function AdminPage() {
                     <TableHead>Email</TableHead>
                     <TableHead>Role</TableHead>
                     <TableHead>User ID</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -898,6 +899,50 @@ export default function AdminPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">{user.id}</TableCell>
+                      <TableCell className="text-right">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="ghost" size="sm" className="gap-2">
+                              <MapPin className="h-4 w-4" />
+                              Addresses ({user.addresses?.length || 0})
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-2xl">
+                            <DialogHeader>
+                              <DialogTitle>User Address Book</DialogTitle>
+                              <DialogDescription>
+                                Saved addresses for {user.displayName || user.email}
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                              {user.addresses && user.addresses.length > 0 ? (
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                  {user.addresses.map((addr: any, i: number) => (
+                                    <Card key={i} className={addr.isDefault ? 'border-primary' : ''}>
+                                      <CardHeader className="p-4 pb-2">
+                                        <div className="flex justify-between items-start">
+                                          <CardTitle className="text-sm">{addr.name}</CardTitle>
+                                          {addr.isDefault && <Badge variant="secondary" className="text-[10px]">Default</Badge>}
+                                        </div>
+                                      </CardHeader>
+                                      <CardContent className="p-4 pt-0 text-xs text-muted-foreground">
+                                        <p>{addr.street}</p>
+                                        <p>{addr.city}, {addr.state} {addr.zip}</p>
+                                        <p>{addr.country}</p>
+                                        <p className="mt-1 text-foreground font-medium">{addr.phone}</p>
+                                      </CardContent>
+                                    </Card>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-center py-8 text-muted-foreground">
+                                  No addresses saved for this user.
+                                </div>
+                              )}
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

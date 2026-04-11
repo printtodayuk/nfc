@@ -82,7 +82,7 @@ export default function Footer() {
           </div>
         </div>
         <div className="mt-16 pt-8 border-t text-center text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} {settings?.navbarName || 'Today AI'}. All rights reserved.<br />Devoloped by RemotizedIT</p>
+          <p>© {new Date().getFullYear()} {settings?.navbarName || 'Today AI'}. All rights reserved.</p>
         </div>
       </div>
     </footer>

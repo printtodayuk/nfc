@@ -29,6 +29,7 @@ interface Address {
   state: string;
   zip: string;
   country: string;
+  phone: string;
   isDefault: boolean;
 }
 
@@ -45,7 +46,7 @@ export default function CartPage() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [selectedAddressId, setSelectedAddressId] = useState<string>('');
   const [newAddress, setNewAddress] = useState<Omit<Address, 'id' | 'isDefault'>>({
-    name: '', street: '', city: '', state: '', zip: '', country: 'UK'
+    name: '', street: '', city: '', state: '', zip: '', country: 'UK', phone: ''
   });
   const [showNewAddressForm, setShowNewAddressForm] = useState(false);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
@@ -102,7 +103,7 @@ export default function CartPage() {
     let finalAddressId = selectedAddressId;
     
     if (isAddingNew) {
-      if (!newAddress.name || !newAddress.street || !newAddress.city || !newAddress.zip) {
+      if (!newAddress.name || !newAddress.street || !newAddress.city || !newAddress.zip || !newAddress.phone) {
         toast.error('Please fill in all required address fields');
         return;
       }
@@ -446,6 +447,10 @@ export default function CartPage() {
                   <div className="grid gap-2">
                     <Label>Street Address</Label>
                     <Input value={newAddress.street} onChange={e => setNewAddress({...newAddress, street: e.target.value})} placeholder="123 Main St" />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Phone Number</Label>
+                    <Input value={newAddress.phone} onChange={e => setNewAddress({...newAddress, phone: e.target.value})} placeholder="+44 123 456 7890" />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">

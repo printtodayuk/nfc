@@ -96,6 +96,7 @@
               "state": { "type": "string" },
               "zip": { "type": "string" },
               "country": { "type": "string" },
+              "phone": { "type": "string" },
               "isDefault": { "type": "boolean" }
             }
           }
@@ -144,7 +145,8 @@
             "city": { "type": "string" },
             "state": { "type": "string" },
             "zip": { "type": "string" },
-            "country": { "type": "string" }
+            "country": { "type": "string" },
+            "phone": { "type": "string" }
           }
         }
       },
