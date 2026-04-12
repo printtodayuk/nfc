@@ -19,8 +19,11 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
     <html lang="en" className={cn("font-sans", geist.variable)}>
       <head>
+        <link rel="dns-prefetch" href="https://picsum.photos" />
+        <link rel="dns-prefetch" href="https://eu2.contabostorage.com" />
         <link rel="preconnect" href="https://picsum.photos" />
         <link rel="preconnect" href="https://eu2.contabostorage.com" />
+        <link rel="preconnect" href="https://lh3.googleusercontent.com" />
       </head>
       <body suppressHydrationWarning>
         <SettingsProvider>

@@ -111,11 +111,11 @@ export default function LandingPage() {
             </video>
           ) : (
             <Image 
-              src={settings?.heroMediaUrl || "https://picsum.photos/seed/ecommerce/1920/1080?blur=4"} 
+              src={settings?.heroMediaUrl || "https://picsum.photos/seed/ecommerce/1280/720?blur=4"} 
               alt="Hero Background" 
               fill 
               priority
-              quality={80}
+              quality={75}
               sizes="100vw"
               className="object-cover opacity-20"
               referrerPolicy="no-referrer"
@@ -125,8 +125,8 @@ export default function LandingPage() {
         </div>
         <div className="container relative z-10 text-center space-y-6">
           <motion.h1 
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ y: 20 }}
+            animate={{ y: 0 }}
             className="text-5xl md:text-7xl font-extrabold tracking-tight"
           >
             {settings?.heroTitle?.split(' ').map((word, i) => (
@@ -138,17 +138,15 @@ export default function LandingPage() {
             )}
           </motion.h1>
           <motion.p 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
+            initial={{ y: 10 }}
+            animate={{ y: 0 }}
             className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto font-medium"
           >
             {settings?.heroSubtitle || "Discover our curated collection of premium products designed for modern living."}
           </motion.p>
           <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
+            initial={{ scale: 0.95 }}
+            animate={{ scale: 1 }}
             className="flex items-center justify-center gap-4"
           >
             <Button size="lg" className="rounded-full px-10 h-14 text-lg shadow-xl shadow-primary/20">Shop Now</Button>

@@ -99,6 +99,7 @@ export default function Navbar() {
                   src={settings.logoUrl} 
                   alt="Logo" 
                   fill 
+                  priority
                   className="object-contain" 
                   referrerPolicy="no-referrer"
                 />
