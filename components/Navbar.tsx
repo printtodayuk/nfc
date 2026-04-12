@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { useCart } from '@/context/CartContext';
+import { useSettings } from '@/context/SettingsContext';
 import Image from 'next/image';
 import AuthModal from './AuthModal';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuGroup } from '@/components/ui/dropdown-menu';
@@ -23,7 +24,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [settings, setSettings] = useState<SiteSettings | null>(null);
+  const { settings } = useSettings();
   const [mounted, setMounted] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const { totalItems } = useCart();
@@ -57,15 +58,8 @@ export default function Navbar() {
       }
     });
 
-    const unsubscribeSettings = onSnapshot(doc(db, 'settings', 'site'), (doc) => {
-      if (doc.exists()) {
-        setSettings(prev => ({ ...prev, ...doc.data() as SiteSettings }));
-      }
-    });
-
     return () => {
       unsubscribeAuth();
-      unsubscribeSettings();
     };
   }, []);
 

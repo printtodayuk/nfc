@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
 import { useCart } from '@/context/CartContext';
+import { useSettings } from '@/context/SettingsContext';
 import { calculateDiscountedPrice } from '@/lib/utils';
 
 interface Category {
@@ -49,7 +50,7 @@ export default function LandingPage() {
   const { addToCart } = useCart();
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [settings, setSettings] = useState<SiteSettings | null>(null);
+  const { settings } = useSettings();
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,16 +65,9 @@ export default function LandingPage() {
       setLoading(false);
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'products'));
 
-    const unsubscribeSettings = onSnapshot(doc(db, 'settings', 'site'), (doc) => {
-      if (doc.exists()) {
-        setSettings(prev => ({ ...prev, ...doc.data() as SiteSettings }));
-      }
-    });
-
     return () => {
       unsubscribeCats();
       unsubscribeProds();
-      unsubscribeSettings();
     };
   }, []);
 
@@ -120,6 +114,8 @@ export default function LandingPage() {
               src={settings?.heroMediaUrl || "https://picsum.photos/seed/ecommerce/1920/1080?blur=4"} 
               alt="Hero Background" 
               fill 
+              priority
+              sizes="100vw"
               className="object-cover opacity-20"
               referrerPolicy="no-referrer"
             />
@@ -218,14 +214,13 @@ export default function LandingPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              <AnimatePresence mode="popLayout">
+              <AnimatePresence mode="wait">
                 {filteredProducts.map((product) => (
                   <motion.div
                     key={product.id}
-                    layout
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.2 }}
                   >
                     <Link href={`/product/${product.id}`}>

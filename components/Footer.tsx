@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import Link from 'next/link';
+import { useSettings } from '@/context/SettingsContext';
 import { Facebook, Twitter, Instagram, Linkedin, Github, Mail, Phone, MapPin, ExternalLink } from 'lucide-react';
 
 interface SiteSettings {
@@ -20,16 +21,7 @@ const ICON_MAP: Record<string, any> = {
 };
 
 export default function Footer() {
-  const [settings, setSettings] = useState<SiteSettings | null>(null);
-
-  useEffect(() => {
-    const unsubscribe = onSnapshot(doc(db, 'settings', 'site'), (doc) => {
-      if (doc.exists()) {
-        setSettings(prev => ({ ...prev, ...doc.data() as SiteSettings }));
-      }
-    });
-    return () => unsubscribe();
-  }, []);
+  const { settings } = useSettings();
 
   return (
     <footer className="w-full border-t bg-background py-16">
