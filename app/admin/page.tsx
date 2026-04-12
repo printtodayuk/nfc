@@ -15,9 +15,13 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { Plus, Trash2, Package, FolderPlus, Loader2, Edit, Settings, Image as ImageIcon, X, Facebook, Twitter, Instagram, Linkedin, Github, Mail, Phone, MapPin, ExternalLink, Play, Users, ShoppingCart as OrdersIcon, CheckCircle, Clock, Truck as ShippingIcon, XCircle, FileText } from 'lucide-react';
-import Invoice from '@/components/Invoice';
+import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { cn, calculateDiscountedPrice } from '@/lib/utils';
+
+const Invoice = dynamic(() => import('@/components/Invoice'), {
+  ssr: false,
+});
 
 interface Category {
   id: string;

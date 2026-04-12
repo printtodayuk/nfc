@@ -12,8 +12,12 @@ import { toast } from 'sonner';
 import { useCart } from '@/context/CartContext';
 import { useSettings } from '@/context/SettingsContext';
 import Image from 'next/image';
-import AuthModal from './AuthModal';
+import dynamic from 'next/dynamic';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuGroup } from '@/components/ui/dropdown-menu';
+
+const AuthModal = dynamic(() => import('./AuthModal'), {
+  ssr: false,
+});
 
 interface SiteSettings {
   navbarName?: string;

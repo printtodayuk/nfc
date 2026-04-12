@@ -134,6 +134,8 @@ export default function ProductDetailsPage() {
               src={selectedImage || `https://picsum.photos/seed/${product.id}/800/800`} 
               alt={product.name} 
               fill 
+              priority
+              sizes="(max-width: 768px) 100vw, 50vw"
               className="object-cover"
               referrerPolicy="no-referrer"
             />

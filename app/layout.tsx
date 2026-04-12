@@ -18,6 +18,10 @@ export const metadata: Metadata = {
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
     <html lang="en" className={cn("font-sans", geist.variable)}>
+      <head>
+        <link rel="preconnect" href="https://picsum.photos" />
+        <link rel="preconnect" href="https://eu2.contabostorage.com" />
+      </head>
       <body suppressHydrationWarning>
         <SettingsProvider>
           <CartProvider>

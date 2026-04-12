@@ -115,6 +115,7 @@ export default function LandingPage() {
               alt="Hero Background" 
               fill 
               priority
+              quality={80}
               sizes="100vw"
               className="object-cover opacity-20"
               referrerPolicy="no-referrer"
@@ -219,7 +220,8 @@ export default function LandingPage() {
                   <motion.div
                     key={product.id}
                     initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: "-50px" }}
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.2 }}
                   >
