@@ -294,6 +294,15 @@ export default function AdminPage() {
     }
   };
 
+  const handleUpdateUserRole = async (userId: string, role: 'admin' | 'user') => {
+    try {
+      await updateDoc(doc(db, 'users', userId), { role });
+      toast.success(`User role updated to ${role}`);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, 'users');
+    }
+  };
+
   const handleDelete = async (coll: string, id: string) => {
     if (!confirm('Are you sure you want to delete this item?')) return;
     try {
@@ -936,9 +945,25 @@ export default function AdminPage() {
                       </TableCell>
                       <TableCell>{user.email}</TableCell>
                       <TableCell>
-                        <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                          {user.role.toUpperCase()}
-                        </Badge>
+                        <Select 
+                          value={user.role} 
+                          onValueChange={(val: 'admin' | 'user' | null) => {
+                            if (val) handleUpdateUserRole(user.id, val);
+                          }}
+                          disabled={user.email === 'printtodayuk@gmail.com'}
+                        >
+                          <SelectTrigger className="w-[110px] h-8 text-xs">
+                            <SelectValue>
+                              <Badge variant={user.role === 'admin' ? 'default' : 'secondary'} className="text-[10px]">
+                                {user.role.toUpperCase()}
+                              </Badge>
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="user">USER</SelectItem>
+                            <SelectItem value="admin">ADMIN</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">{user.id}</TableCell>
                       <TableCell className="text-right">

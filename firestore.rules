@@ -174,9 +174,11 @@ service cloud.firestore {
                       isValidUser(request.resource.data) && 
                       request.resource.data.email is string &&
                       request.resource.data.role == 'user';
-      allow update: if isAuthenticated() && (request.auth.uid == userId) && 
-                      isValidUser(request.resource.data) && 
-                      (request.resource.data.role == resource.data.role || isAdmin());
+      allow update: if isAuthenticated() && 
+                      (
+                        (request.auth.uid == userId && isValidUser(request.resource.data) && request.resource.data.role == resource.data.role) || 
+                        isAdmin()
+                      );
       allow delete: if isAdmin();
     }
 

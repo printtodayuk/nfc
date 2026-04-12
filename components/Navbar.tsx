@@ -39,31 +39,41 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
+    let unsubscribeUser: () => void;
+
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        if (!currentUser.email) {
-          console.error("User email not found");
-          return;
-        }
-        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        // Initial setup if user doesn't exist
+        const userRef = doc(db, 'users', currentUser.uid);
+        const userDoc = await getDoc(userRef);
+        
         if (!userDoc.exists()) {
           const role = currentUser.email === 'printtodayuk@gmail.com' ? 'admin' : 'user';
-          await setDoc(doc(db, 'users', currentUser.uid), {
+          await setDoc(userRef, {
             email: currentUser.email,
-            role: role
+            role: role,
+            displayName: currentUser.displayName,
+            photoURL: currentUser.photoURL,
+            createdAt: new Date().toISOString()
           });
-          setIsAdmin(role === 'admin');
-        } else {
-          setIsAdmin(userDoc.data().role === 'admin');
         }
+
+        // Reactive listener for role changes
+        unsubscribeUser = onSnapshot(userRef, (doc) => {
+          if (doc.exists()) {
+            setIsAdmin(doc.data().role === 'admin');
+          }
+        });
       } else {
         setIsAdmin(false);
+        if (unsubscribeUser) unsubscribeUser();
       }
     });
 
     return () => {
       unsubscribeAuth();
+      if (unsubscribeUser) unsubscribeUser();
     };
   }, []);
 
